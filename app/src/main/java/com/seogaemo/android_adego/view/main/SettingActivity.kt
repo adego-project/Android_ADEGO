@@ -76,7 +76,10 @@ class SettingActivity : AppCompatActivity() {
                 createDialog(this@SettingActivity, "약속에서\n나가시겠습니까?", "나가기") { dialog ->
                     CoroutineScope(Dispatchers.IO).launch {
                         leavePlan(this@SettingActivity)
-                        dialog.dismiss()
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@SettingActivity, "약속에서 탈퇴하셨습니다", Toast.LENGTH_SHORT).show()
+                            dialog.dismiss()
+                        }
                     }
                 }
             }
