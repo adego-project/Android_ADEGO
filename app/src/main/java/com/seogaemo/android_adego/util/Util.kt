@@ -263,22 +263,22 @@ object Util {
 
     fun isDateEnd(dateString: String): Boolean {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'H:m:ss")
-        val inputDateTime = LocalDateTime.parse(dateString, formatter)
+        val inputDateTime = LocalDateTime.parse(dateString, formatter).plusMinutes(30)
 
-        val koreaZone = ZoneId.of("Asia/Seoul")
-        val currentKoreaDateTime = LocalDateTime.now(koreaZone).plusMinutes(30)
-
-        return inputDateTime.isBefore(currentKoreaDateTime) || inputDateTime.isEqual(currentKoreaDateTime)
-    }
-
-    fun isActiveDate(dateString: String): Boolean {
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-        val inputDateTime = LocalDateTime.parse(dateString, formatter)
         val koreaZone = ZoneId.of("Asia/Seoul")
         val currentKoreaDateTime = LocalDateTime.now(koreaZone)
 
-        val thresholdDateTime = inputDateTime.minusMinutes(30)
-        return currentKoreaDateTime.isEqual(thresholdDateTime) || currentKoreaDateTime.isAfter(thresholdDateTime)
+        return currentKoreaDateTime.isAfter(inputDateTime) || currentKoreaDateTime.isEqual(inputDateTime)
+    }
+
+    fun isActiveDate(dateString: String): Boolean {
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:m:ss")
+        val inputDateTime = LocalDateTime.parse(dateString, formatter).minusMinutes(30)
+
+        val koreaZone = ZoneId.of("Asia/Seoul")
+        val currentKoreaDateTime = LocalDateTime.now(koreaZone)
+
+        return currentKoreaDateTime.isEqual(inputDateTime) || currentKoreaDateTime.isAfter(inputDateTime)
     }
 
     suspend fun leavePlan(context: Context): PlanResponse? {
