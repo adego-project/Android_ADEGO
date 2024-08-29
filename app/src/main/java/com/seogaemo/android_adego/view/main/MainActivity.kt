@@ -128,15 +128,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         }
 
         combinedLiveData.observe(this) { (status, plan) ->
+            plan?.let {
+                if (isDateEnd(plan.date)) {
+                    lifecycleScope.launch { leavePlan(this@MainActivity) }
+                    planViewModel.setPlanStatus(true)
+                }
+
+                if (status == PlanStatus.DISABLED && isActiveDate(plan.date)) {
+                    planViewModel.setPlanStatus(false)
+                }
+            }
+
             val inflater: LayoutInflater = layoutInflater
             selectedBottomView(status, plan, inflater)
-        }
-
-        planViewModel.plan.observe(this) { plan ->
-            if (isDateEnd(plan.date)) {
-                lifecycleScope.launch { leavePlan(this@MainActivity) }
-                planViewModel.setPlanStatus(true)
-            }
         }
 
     }
