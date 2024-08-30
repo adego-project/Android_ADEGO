@@ -43,21 +43,17 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.startButton.setOnClickListener {
-            saveToken(this@LoginActivity, "test", "test")
+        binding.kakaoLoginButton.setOnClickListener {
+            kakaoLogin(this@LoginActivity)
         }
 
-//        binding.kakaoLoginButton.setOnClickListener {
-//            kakaoLogin(this@LoginActivity)
-//        }
-//
-//        binding.googleLoginButton.setOnClickListener {
-//            googleLogin(this@LoginActivity)
-//        }
-//
-//        binding.logoButton.setOnClickListener {
-//            saveToken(this@LoginActivity, "test", "test")
-//        }
+        binding.googleLoginButton.setOnClickListener {
+            googleLogin(this@LoginActivity)
+        }
+
+        binding.logoButton.setOnClickListener {
+            saveToken(this@LoginActivity, "test", "test")
+        }
 
     }
 
