@@ -42,6 +42,12 @@ interface RetrofitAPI {
         @Header("Authorization") authorization: String,
     ): Response<UserResponse>
 
+    @GET("user/{id}")
+    suspend fun getUserById(
+        @Header("Authorization") authorization: String,
+        @Path(value = "id") id : String
+    ): Response<UserResponse>
+
     @PATCH("user")
     suspend fun updateName(
         @Header("Authorization") authorization: String,
@@ -110,7 +116,7 @@ interface RetrofitAPI {
     @GET("location/participants")
     suspend fun getLocation(
         @Header("Authorization") authorization: String,
-    ): Response<LocationResponse>
+    ): Response<Map<String, Location>>
 
     @POST("location/update")
     suspend fun updateLocation(

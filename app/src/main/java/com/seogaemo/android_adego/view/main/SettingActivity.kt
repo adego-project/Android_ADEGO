@@ -13,13 +13,13 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.seogaemo.android_adego.R
 import com.seogaemo.android_adego.data.ImageRequest
-import com.seogaemo.android_adego.data.PlanResponse
 import com.seogaemo.android_adego.data.UserResponse
 import com.seogaemo.android_adego.database.SharedPreference
 import com.seogaemo.android_adego.database.TokenManager
 import com.seogaemo.android_adego.databinding.ActivitySettingBinding
 import com.seogaemo.android_adego.network.RetrofitAPI
 import com.seogaemo.android_adego.network.RetrofitClient
+import com.seogaemo.android_adego.service.BackgroundLocationUpdateService
 import com.seogaemo.android_adego.util.Util
 import com.seogaemo.android_adego.util.Util.createDialog
 import com.seogaemo.android_adego.util.Util.getUser
@@ -76,7 +76,12 @@ class SettingActivity : AppCompatActivity() {
                 createDialog(this@SettingActivity, "약속에서\n나가시겠습니까?", "나가기") { dialog ->
                     CoroutineScope(Dispatchers.IO).launch {
                         leavePlan(this@SettingActivity)
-                        dialog.dismiss()
+                        withContext(Dispatchers.Main) {
+                            val intent = Intent(this@SettingActivity, BackgroundLocationUpdateService::class.java)
+                            stopService(intent)
+                            Toast.makeText(this@SettingActivity, "약속에서 탈퇴하셨습니다", Toast.LENGTH_SHORT).show()
+                            dialog.dismiss()
+                        }
                     }
                 }
             }

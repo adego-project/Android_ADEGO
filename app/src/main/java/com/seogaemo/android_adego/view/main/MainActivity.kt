@@ -1,17 +1,24 @@
 package com.seogaemo.android_adego.view.main
 
 import android.Manifest
+import android.app.ActivityManager
+import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +27,11 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.viewbinding.ViewBinding
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CircleCrop
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -30,13 +42,19 @@ import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.seogaemo.android_adego.R
+import com.seogaemo.android_adego.data.Location
 import com.seogaemo.android_adego.data.PlanResponse
 import com.seogaemo.android_adego.data.PlanStatus
+import com.seogaemo.android_adego.data.UserResponse
 import com.seogaemo.android_adego.database.PlanViewModel
+import com.seogaemo.android_adego.database.TokenManager
 import com.seogaemo.android_adego.databinding.ActiveViewBinding
 import com.seogaemo.android_adego.databinding.ActivityMainBinding
 import com.seogaemo.android_adego.databinding.DisabledViewBinding
 import com.seogaemo.android_adego.databinding.NoPromiseViewBinding
+import com.seogaemo.android_adego.network.RetrofitAPI
+import com.seogaemo.android_adego.network.RetrofitClient
+import com.seogaemo.android_adego.service.BackgroundLocationUpdateService
 import com.seogaemo.android_adego.util.Util.copyToClipboard
 import com.seogaemo.android_adego.util.Util.getLink
 import com.seogaemo.android_adego.util.Util.isActiveDate
@@ -65,6 +83,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
     private val planViewModel: PlanViewModel by viewModels()
     private val combinedLiveData = MediatorLiveData<Pair<PlanStatus?, PlanResponse?>>()
 
+    private var userImageMap = mutableMapOf<String, String>()
+
     private val loginReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "ACTION_LOGIN_REQUIRED") {
@@ -73,7 +93,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             }
         }
     }
-
     private val timeUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_TIME_TICK) {
@@ -85,6 +104,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                         if (isDateEnd(planDate)) {
                             lifecycleScope.launch { leavePlan(this@MainActivity) }
                             planViewModel.setPlanStatus(true)
+                        } else {
+                            startMyServiceIfNotRunning(this@MainActivity)
                         }
                     }
                     PlanStatus.DISABLED -> {
@@ -100,13 +121,30 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             }
         }
     }
+    private lateinit var requestPermissionsLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        askNotificationPermission()
+        requestPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+            val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+            val postNotificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { permissions[Manifest.permission.POST_NOTIFICATIONS] == true } else { true }
+            if (fineLocationGranted && coarseLocationGranted && postNotificationsGranted) {
+                mainInit()
+            } else {
+                Toast.makeText(this, "권한을 모두 허용해주세요", Toast.LENGTH_SHORT).show()
+                requestPermissions()
+            }
+        }
+
+        requestPermissions()
+
+    }
+
+    private fun mainInit() {
         LocalBroadcastManager.getInstance(this).registerReceiver(loginReceiver, IntentFilter("ACTION_LOGIN_REQUIRED"))
 
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -128,17 +166,139 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         }
 
         combinedLiveData.observe(this) { (status, plan) ->
+            plan?.let {
+                if (isDateEnd(plan.date)) {
+                    lifecycleScope.launch { leavePlan(this@MainActivity) }
+                    planViewModel.setPlanStatus(true)
+                }
+
+                if (status == PlanStatus.DISABLED && isActiveDate(plan.date)) {
+                    planViewModel.setPlanStatus(false)
+                }
+
+                if (status == PlanStatus.ACTIVE && !isDateEnd(plan.date)) {
+                    if (!isServiceRunning(this, BackgroundLocationUpdateService::class.java)) {
+                        val intent = Intent(this, BackgroundLocationUpdateService::class.java)
+                        ContextCompat.startForegroundService(this, intent)
+                    }
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        initUserImageMap()
+                        setUserMaker()
+                    }, 3000)
+                }
+            }
+
             val inflater: LayoutInflater = layoutInflater
             selectedBottomView(status, plan, inflater)
         }
+    }
 
-        planViewModel.plan.observe(this) { plan ->
-            if (isDateEnd(plan.date)) {
-                lifecycleScope.launch { leavePlan(this@MainActivity) }
-                planViewModel.setPlanStatus(true)
+    private fun initUserImageMap() {
+        lifecycleScope.launch {
+            val locationResponse = getLocation()
+            val userIdList = locationResponse?.map { (id, _) -> id }
+            val newUserImageMap = mutableMapOf<String, String>()
+            userIdList?.forEach {
+                val userImage = getUserById(it)?.profileImage.toString()
+                newUserImageMap[it] = userImage
+            }
+            userImageMap = newUserImageMap
+        }
+    }
+
+    private fun requestPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionsLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            )
+        } else {
+            requestPermissionsLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                )
+            )
+        }
+    }
+
+
+    private fun isServiceRunning(context: Context, serviceClass: Class<out Service>): Boolean {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val services = activityManager.getRunningServices(Int.MAX_VALUE)
+        for (service in services) {
+            if (service.service.className == serviceClass.name) {
+                return true
             }
         }
+        return false
+    }
 
+    fun startMyServiceIfNotRunning(context: Context) {
+        if (!isServiceRunning(context, BackgroundLocationUpdateService::class.java)) {
+            val intent = Intent(context, BackgroundLocationUpdateService::class.java)
+            ContextCompat.startForegroundService(context, intent)
+        }
+        initUserImageMap()
+        setUserMaker()
+    }
+
+    private fun setUserMaker() {
+        lifecycleScope.launch {
+            val locationResponse = getLocation()
+            locationResponse?.forEach { (id, location) ->
+                Glide.with(this@MainActivity)
+                    .asBitmap()
+                    .load(userImageMap[id])
+                    .override(dpToPx(), dpToPx())
+                    .apply(RequestOptions().transform(CircleCrop()))
+                    .into(object : CustomTarget<Bitmap>() {
+                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                            mMap.addMarker(MarkerOptions().icon(
+                                BitmapDescriptorFactory.fromBitmap(resource)
+                            ).position(LatLng(location.lat.toDouble(), location.lng.toDouble())))
+                        }
+
+                        override fun onLoadCleared(placeholder: Drawable?) {
+                        }
+                    })
+            }
+        }
+    }
+
+    private suspend fun getUserById(id: String): UserResponse? {
+        return try {
+            withContext(Dispatchers.IO) {
+                val retrofitAPI = RetrofitClient.getInstance().create(RetrofitAPI::class.java)
+                val response = retrofitAPI.getUserById("bearer ${TokenManager.accessToken}", id)
+                if (response.isSuccessful) {
+                    response.body()
+                }else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun getLocation(): Map<String, Location>? {
+        return try {
+            withContext(Dispatchers.IO) {
+                val retrofitAPI = RetrofitClient.getInstance().create(RetrofitAPI::class.java)
+                val response = retrofitAPI.getLocation("bearer ${TokenManager.accessToken}")
+                if (response.isSuccessful) {
+                    response.body()
+                }else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun updateTimeTickReceiver(isRemove: Boolean) {
@@ -194,6 +354,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             }
         }
 
+    }
+
+    private fun dpToPx(): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            40.toFloat(),
+            this.resources.displayMetrics
+        ).toInt()
     }
 
     private fun showDisabledView(inflater: LayoutInflater, promiseInfo: PlanResponse) {
@@ -321,27 +489,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             return true
         } else {
             return false
-        }
-    }
-
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { isGranted: Boolean ->
-        if (!isGranted) {
-            askNotificationPermission()
-        }
-    }
-
-    private fun askNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                    Toast.makeText(this@MainActivity, "알람 권한을 허용해주세요", Toast.LENGTH_SHORT).show()
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            }
         }
     }
 
