@@ -17,17 +17,55 @@
 
 ## 사용 예제
 
-### 시연 영상
-
 ### 스샷
 
 <div style="text-align: left;">    
     <img src="https://github.com/user-attachments/assets/9202aaa9-d725-4810-9cbc-461b3899d16d"  width="400" height="800"/>
     <img src="https://github.com/user-attachments/assets/186b3b5d-7d33-4d87-abba-a5d72a8a9b5e"  width="400" height="800"/>
+    <br>
     <img src="https://github.com/user-attachments/assets/e9fa6d07-9360-4c5d-ba28-268c4c52b19c"  width="200" height="400"/>
     <img src="https://github.com/user-attachments/assets/3573d95c-f1c2-4216-9f8b-0e408d1ddc9b"  width="200" height="400"/>
     <img src="https://github.com/user-attachments/assets/c90f548c-a30b-42e6-97b8-1a9157dd94c9"  width="200" height="400"/>
 </div>
+<div style="text-align: left;">    
+    <img src="https://github.com/user-attachments/assets/d7eac7eb-35cf-4b45-b3c1-55a91ae5e0ec"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/f1b2ca81-205f-48f8-926e-3b6412ea765f"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/bc72492f-8f54-4fac-beeb-9e065272d3f8"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/f083e588-bf60-4e02-92d6-6e71bcae16f1"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/53c5a814-c23a-4d52-85cf-ebfa7c939b65"  width="180" height="180"/>
+</div>
+<br>
+<div style="text-align: left;">    
+    <img src="https://github.com/user-attachments/assets/26de1ce5-7921-45d0-a180-db6fb6816e15"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/dd57a6d5-ac2d-4415-9aa6-61e693c3b04f"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/a91e407b-44d9-40c3-a3c5-9ee8ad3b3049"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/e5924495-b847-415b-991d-cb873b85d23c"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/888a90a1-392d-4f20-8c22-8edbd9ba2e46"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/6b569a0e-681f-4b10-9abd-eacf9158e08e"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/9589b2ec-f8e7-4bf8-b54a-7ef55133fcb6"  width="180" height="180"/>
+</div>
+<br>
+<div style="text-align: left;">    
+    <img src="https://github.com/user-attachments/assets/fce6d3e8-0ae2-411f-ba9f-718ac57fdc52"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/6fbe8337-931a-45dd-bade-020e66ef175a"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/368ca968-7680-45c8-b42d-481e2850c3f7"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/db303561-0f86-43cf-b420-f49fef7be925"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/798c04d0-adfa-45be-8d33-1fae80a10db8"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/350c4f50-84b8-4253-beaf-eab687570190"  width="180" height="180"/>
+    <img src="https://github.com/user-attachments/assets/54f4c3ce-ad01-467a-a4fa-b297e6cedf4f"  width="180" height="180"/>
+</div>
+
+### 시연 영상
+
+https://github.com/user-attachments/assets/4c3cc367-c6e7-4166-b088-856e981991ec
+
+https://github.com/user-attachments/assets/68487590-9c71-4fc2-847c-a86c4e21fc11
+
+https://github.com/user-attachments/assets/c279a0da-6992-4e54-8b81-fdc0aa6df033
+
+https://github.com/user-attachments/assets/dc3837eb-1f3d-4a79-899f-de95ca88d728
+
+https://github.com/user-attachments/assets/1b36be91-270a-4b4b-8a6d-bd439a3399eb
 
 ## 구현 기능
 
@@ -39,7 +77,8 @@
     - 프로필 이름 설정
 - 홈
     - 구글 맵
-    - 약속 상태 실시간 표시
+    - 약속 상태 실시간 표시 (약속 시간 전, 후 30분)
+    - FCM 메세지 전송 (약속 시간 전, 후 30분)
     - 실시간 유저 위치 표시
     - 실시간 현재 위치 송수신
 - 약속 생성
