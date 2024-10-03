@@ -9,6 +9,7 @@ import android.content.Context.INPUT_METHOD_SERVICE
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -34,6 +35,7 @@ import com.seogaemo.android_adego.network.RetrofitClient
 import com.seogaemo.android_adego.view.auth.LoginActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -73,7 +75,14 @@ object Util {
         val inputStream: InputStream? = contentResolver.openInputStream(uri)
 
         return inputStream?.use {
-            val byteArray = it.readBytes()
+            val bitmap = BitmapFactory.decodeStream(it)
+
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 150, 150, true)
+
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+            val byteArray = byteArrayOutputStream.toByteArray()
+
             Base64.encodeToString(byteArray, Base64.DEFAULT)
         }
     }
