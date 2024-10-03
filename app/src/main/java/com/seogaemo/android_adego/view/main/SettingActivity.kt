@@ -40,6 +40,11 @@ class SettingActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
                 val image = uriToBase64(this@SettingActivity, it).toString()
+                Glide.with(this@SettingActivity)
+                    .load(it)
+                    .centerCrop()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .into(binding.imageView)
                 CoroutineScope(Dispatchers.IO).launch {
                     updateImage(this@SettingActivity, image)
                 }
